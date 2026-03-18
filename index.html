@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Terminal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#080808;color:#00ff41;font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);pointer-events:none;z-index:9999}
+@keyframes blink{50%{opacity:0}}
+@keyframes pulse{50%{opacity:.3}}
+@keyframes slide{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}
+
+.hdr{border-bottom:2px solid #00aa2a;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;background:rgba(0,255,65,.03);position:sticky;top:0;z-index:100}
+.logo{font-family:‘VT323’,monospace;font-size:clamp(1.5rem,5vw,2.2rem);text-shadow:0 0 10px #00ff41;letter-spacing:3px}
+.logo span{color:#ffd700}
+#clock{font-family:‘VT323’,monospace;font-size:clamp(1.4rem,5vw,1.9rem);color:#00ffff;text-shadow:0 0 8px #00ffff;text-align:right}
+.sub-clock{font-size:.6rem;color:#00aa2a;text-align:right}
+
+.boot{font-size:.62rem;color:#00aa2a;padding:3px 14px;border-bottom:1px solid #1a3d1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.boot b{color:#00ff41}
+
+.ticker{overflow:hidden;height:26px;border-bottom:1px solid #1a3d1a}
+.ticker-track{display:inline-flex;white-space:nowrap;gap:28px;padding:0 10px;height:26px;align-items:center;font-size:.68rem;animation:slide 30s linear infinite}
+.ti{color:#00aa2a}.ti b{color:#00ff41;font-weight:normal}
+
+.main{padding:8px;display:flex;flex-direction:column;gap:6px;padding-bottom:44px}
+.pnl{background:#0c0c0c;border:1px solid #1a3d1a;padding:12px}
+.ptit{font-family:‘VT323’,monospace;font-size:.85rem;color:#00aa2a;letter-spacing:2px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid #1a3d1a;display:flex;justify-content:space-between;align-items:center}
+
+.big{font-family:‘VT323’,monospace;font-size:clamp(3rem,15vw,5.5rem);line-height:1;letter-spacing:-1px}
+.up{color:#00ff41;text-shadow:0 0 18px #00ff41}
+.dn{color:#ff3131;text-shadow:0 0 18px #ff3131}
+.chg{font-family:‘VT323’,monospace;font-size:clamp(1rem,4vw,1.4rem);margin-top:4px}
+
+.sub3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.si label{font-size:.56rem;color:#00aa2a;letter-spacing:2px;display:block;margin-bottom:2px}
+.si .v{font-family:‘VT323’,monospace;font-size:clamp(.9rem,3vw,1.3rem);color:#e0ffe0}
+
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:480px){.r2{grid-template-columns:1fr}}
+
+.stat{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:.7rem;border-bottom:1px solid #1a3d1a}
+.stat:last-child{border-bottom:none}
+.sl{color:#00aa2a}.sv{font-family:‘VT323’,monospace;font-size:.95rem;color:#e0ffe0}
+
+.blk{font-family:‘VT323’,monospace;font-size:clamp(1.8rem,7vw,2.8rem);color:#00ffff;text-shadow:0 0 10px #00ffff;line-height:1}
+.prog{height:7px;background:#003d0e;border:1px solid #1a3d1a;margin-top:8px;overflow:hidden}
+.prog-f{height:100%;background:#00ff41;box-shadow:0 0 6px #00ff41;transition:width 1s}
+.pl{display:flex;justify-content:space-between;font-size:.56rem;color:#00aa2a;margin-top:3px}
+.halv{font-family:‘VT323’,monospace;font-size:clamp(1.2rem,4vw,1.7rem);color:#ffd700}
+
+.f3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.fb{border:1px solid #1a3d1a;padding:8px 4px;text-align:center}
+.fb label{font-size:.54rem;color:#00aa2a;display:block;margin-bottom:3px}
+.fv{font-family:‘VT323’,monospace;font-size:clamp(1.3rem,4vw,1.8rem)}
+.fu{font-size:.52rem;color:#00aa2a}
+
+.fg-bar{height:20px;background:linear-gradient(to right,#ff3131,#ff8844,#ffd700,#00ff41);border:1px solid #1a3d1a;position:relative;margin-bottom:2px}
+.fg-n{position:absolute;top:-3px;width:3px;height:26px;background:#fff;box-shadow:0 0 6px #fff;transform:translateX(-50%);transition:left 1s}
+.fg-v{font-family:‘VT323’,monospace;font-size:clamp(1.8rem,6vw,2.5rem);text-align:center;margin-top:6px}
+.fg-l{text-align:center;font-size:.62rem;color:#00aa2a;letter-spacing:2px}
+
+.chart-w{width:100%;height:clamp(100px,22vw,130px)}
+canvas{width:100%;height:100%}
+
+.log{max-height:110px;overflow-y:auto;font-size:.63rem;scrollbar-width:thin;scrollbar-color:#00aa2a transparent}
+.le{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(0,255,65,.05)}
+.lt{color:#00aa2a;min-width:70px;flex-shrink:0}
+.lm{color:#00ff41}.lm.w{color:#ffd700}.lm.e{color:#ff3131}
+
+.btn{font-family:‘Share Tech Mono’,monospace;background:#003d0e;color:#00ff41;border:1px solid #00aa2a;padding:4px 14px;font-size:.68rem;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.sbar{position:fixed;bottom:0;left:0;right:0;background:#003d0e;border-top:1px solid #00aa2a;padding:3px 12px;font-size:.6rem;display:flex;justify-content:space-between;align-items:center;z-index:100}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+</style>
+
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">₿TC://<span>TERM</span></div>
+  <div>
+    <div id="clock">--:--:--</div>
+    <div class="sub-clock">MAINNET · LIVE</div>
+  </div>
+</div>
+
+<div class="boot">&gt; UPTIME: <b id="up">00:00:00</b> &nbsp;|&nbsp; <b id="stmsg">INICIALITZANT...</b> &nbsp;|&nbsp; ACT: <b id="actu">---</b></div>
+
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="ti">BTC/USD <b id="t0">---</b></span>
+    <span class="ti">24H HIGH <b id="t1">---</b></span>
+    <span class="ti">24H LOW <b id="t2">---</b></span>
+    <span class="ti">VOL 24H <b id="t3">---</b></span>
+    <span class="ti">MKT CAP <b id="t4">---</b></span>
+    <span class="ti">CANVI <b id="t5">---</b></span>
+    <span class="ti">FEAR/GREED <b id="t6">---</b></span>
+    <span class="ti">BLOC <b id="t7">---</b></span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="pnl">
+    <div class="ptit">▸ PREU_BITCOIN <span style="animation:blink 1s step-end infinite;color:#00ff41">■ LIVE</span></div>
+    <div class="big up" id="price">$---,---</div>
+    <div class="chg up" id="chg">---</div>
+    <div class="sub3">
+      <div class="si"><label>24H HIGH</label><div class="v" id="high">---</div></div>
+      <div class="si"><label>24H LOW</label><div class="v" id="low">---</div></div>
+      <div class="si"><label>ATH</label><div class="v">$108,268</div></div>
+    </div>
+  </div>
+
+  <div class="pnl">
+    <div class="ptit">▸ HISTORIAL <span id="clbl" style="font-size:.68rem;color:#00aa2a">[---]</span></div>
+    <div class="chart-w"><canvas id="cv"></canvas></div>
+  </div>
+
+  <div class="r2">
+    <div class="pnl">
+      <div class="ptit">▸ BLOCKCHAIN</div>
+      <div style="font-size:.56rem;color:#00aa2a;letter-spacing:2px">ALÇADA BLOC</div>
+      <div class="blk" id="blk">---,---</div>
+      <div class="prog"><div class="prog-f" id="pf" style="width:0%"></div></div>
+      <div class="pl"><span>HALVING</span><span id="hpct">--%</span></div>
+      <div style="font-size:.56rem;color:#00aa2a;margin-top:8px">PRÒXIM HALVING</div>
+      <div class="halv" id="hrem">---,---</div>
+      <div style="font-size:.56rem;color:#00aa2a">BLOCS RESTANTS</div>
+    </div>
+    <div class="pnl">
+      <div class="ptit">▸ FEES [SAT/VB]</div>
+      <div class="f3">
+        <div class="fb"><label>⚡ RÀPID</label><div class="fv" style="color:#ffd700" id="ff">--</div><div class="fu" id="ffu">~$--</div></div>
+        <div class="fb"><label>▸ MIG</label><div class="fv" style="color:#00ff41" id="fm">--</div><div class="fu" id="fmu">~$--</div></div>
+        <div class="fb"><label>◌ LENT</label><div class="fv" style="color:#00aa2a" id="fs">--</div><div class="fu" id="fsu">~$--</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:.56rem;color:#00aa2a">MEMPOOL</div>
+      <div style="font-family:'VT323',monospace;font-size:1.4rem;color:#00ffff" id="mem">--- MB</div>
+      <div style="font-size:.56rem;color:#00aa2a;margin-top:4px">TXS PENDENTS</div>
+      <div style="font-family:'VT323',monospace;font-size:1.1rem;color:#e0ffe0" id="txc">---</div>
+    </div>
+  </div>
+
+  <div class="r2">
+    <div class="pnl">
+      <div class="ptit">▸ XARXA</div>
+      <div style="font-family:'VT323',monospace;font-size:clamp(1.5rem,5vw,2.2rem);color:#ffd700" id="hr">--- EH/s</div>
+      <div style="font-size:.56rem;color:#00aa2a;margin-bottom:8px">HASHRATE</div>
+      <div class="stat"><span class="sl">DIFICULTAT</span><span class="sv" id="diff">---</span></div>
+      <div class="stat"><span class="sl">DOMINACIÓ</span><span class="sv" id="dom">---%</span></div>
+      <div class="stat"><span class="sl">CANVI 7D</span><span class="sv" id="c7d">---%</span></div>
+      <div class="stat"><span class="sl">MKT CAP</span><span class="sv" id="mcap">---</span></div>
+      <div class="stat"><span class="sl">SUPPLY</span><span class="sv" id="sup">---</span></div>
+    </div>
+    <div class="pnl">
+      <div class="ptit">▸ POR/COBDÍCIA</div>
+      <div class="fg-bar"><div class="fg-n" id="fgn" style="left:50%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:.5rem;color:#00aa2a;margin-bottom:4px"><span>POR</span><span>COBDÍCIA</span></div>
+      <div class="fg-v" id="fgv" style="color:#00ff41">--/100</div>
+      <div class="fg-l" id="fgl">---</div>
+    </div>
+  </div>
+
+  <div class="pnl">
+    <div class="ptit">▸ LOG <span style="animation:blink 1s step-end infinite">_</span>
+      <button class="btn" id="rbtn" onclick="doRefresh()">↻ REFRESCA</button>
+    </div>
+    <div class="log" id="logbox"></div>
+  </div>
+
+</div>
+
+<div class="sbar">
+  <div><span class="dot" id="dot" style="background:#ffd700"></span><span id="sbmsg">CONNECTANT...</span></div>
+  <div id="sbtime" style="color:#00aa2a">--:--:--</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt  = n => n == null ? '---' : new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+const fmtI = n => n == null ? '---' : new Intl.NumberFormat('en-US').format(Math.round(n));
+const fmtB = n => { if(!n) return '---'; if(n>=1e12) return (n/1e12).toFixed(2)+'T'; if(n>=1e9) return (n/1e9).toFixed(2)+'B'; if(n>=1e6) return (n/1e6).toFixed(2)+'M'; return fmtI(n); };
+
+let btcPrice = null, priceHist = [], busy = false, t0 = Date.now();
+
+function addLog(msg, type='') {
+  const t = new Date().toLocaleTimeString('ca',{hour12:false});
+  const b = $('logbox');
+  const d = document.createElement('div');
+  d.className='le';
+  d.innerHTML=`<span class="lt">[${t}]</span><span class="lm ${type}">${msg}</span>`;
+  b.insertBefore(d, b.firstChild);
+  while(b.children.length > 30) b.removeChild(b.lastChild);
+}
+
+// Rellotge
+setInterval(() => {
+  const n = new Date();
+  $('clock').textContent = n.toLocaleTimeString('ca',{hour12:false});
+  $('sbtime').textContent = n.toLocaleTimeString('ca',{hour12:false});
+  const e = Math.floor((Date.now()-t0)/1000);
+  $('up').textContent = `${String(Math.floor(e/3600)).padStart(2,'0')}:${String(Math.floor(e%3600/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`;
+}, 1000);
+
+// Gràfic
+function drawChart(prices) {
+  const cv = $('cv');
+  if(!cv || prices.length < 2) return;
+  const dpr = window.devicePixelRatio||1;
+  cv.width = cv.offsetWidth*dpr; cv.height = cv.offsetHeight*dpr;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const W=cv.offsetWidth, H=cv.offsetHeight, p={t:8,b:20,l:56,r:8};
+  const cW=W-p.l-p.r, cH=H-p.t-p.b;
+  const mn=Math.min(...prices)*.9995, mx=Math.max(...prices)*1.0005, rng=mx-mn||1;
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<=4;i++){
+    const y=p.t+(cH/4)*i;
+    ctx.strokeStyle='rgba(0,255,65,.08)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(W-p.r,y);ctx.stroke();
+    ctx.fillStyle='rgba(0,255,65,.5)';ctx.font='9px monospace';
+    ctx.fillText('$'+fmtI(mx-(rng/4)*i),2,y+3);
+  }
+  const tx=i=>p.l+(i/(prices.length-1))*cW;
+  const ty=v=>p.t+cH-((v-mn)/rng)*cH;
+  const g=ctx.createLinearGradient(0,p.t,0,H-p.b);
+  g.addColorStop(0,'rgba(0,255,65,.25)');g.addColorStop(1,'rgba(0,255,65,0)');
+  ctx.beginPath();ctx.moveTo(tx(0),ty(prices[0]));
+  for(let i=1;i<prices.length;i++){const c=(tx(i-1)+tx(i))/2;ctx.bezierCurveTo(c,ty(prices[i-1]),c,ty(prices[i]),tx(i),ty(prices[i]))}
+  ctx.lineTo(tx(prices.length-1),H-p.b);ctx.lineTo(tx(0),H-p.b);ctx.closePath();
+  ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(tx(0),ty(prices[0]));
+  for(let i=1;i<prices.length;i++){const c=(tx(i-1)+tx(i))/2;ctx.bezierCurveTo(c,ty(prices[i-1]),c,ty(prices[i]),tx(i),ty(prices[i]))}
+  ctx.strokeStyle='#00ff41';ctx.lineWidth=2;ctx.shadowColor='#00ff41';ctx.shadowBlur=5;ctx.stroke();ctx.shadowBlur=0;
+  ctx.beginPath();ctx.arc(tx(prices.length-1),ty(prices[prices.length-1]),4,0,Math.PI*2);
+  ctx.fillStyle='#00ff41';ctx.shadowColor='#00ff41';ctx.shadowBlur=10;ctx.fill();ctx.shadowBlur=0;
+  $('clbl').textContent = `[${prices.length} MOSTRES]`;
+}
+
+// Fetch preu — CoinGecko directe
+async function loadPrice() {
+  addLog('Obtenint preu BTC de CoinGecko...');
+  const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true&include_market_cap=true&include_high_low_24h=true');
+  const d = await r.json();
+  const b = d.bitcoin;
+  btcPrice = b.usd;
+  const chg = b.usd_24h_change;
+  const up = chg >= 0;
+  $('price').textContent = '$'+fmt(btcPrice);
+  $('price').className = 'big '+(up?'up':'dn');
+  $('chg').textContent = (up?'▲ +':'▼ ')+chg.toFixed(2)+'% (24H)';
+  $('chg').className = 'chg '+(up?'up':'dn');
+  $('high').textContent = '$'+fmtI(b.usd_24h_high);
+  $('low').textContent  = '$'+fmtI(b.usd_24h_low);
+  $('mcap').textContent = '$'+fmtB(b.usd_market_cap);
+  $('t0').textContent='$'+fmt(btcPrice); $('t1').textContent='$'+fmtI(b.usd_24h_high);
+  $('t2').textContent='$'+fmtI(b.usd_24h_low); $('t3').textContent='$'+fmtB(b.usd_24h_vol);
+  $('t4').textContent='$'+fmtB(b.usd_market_cap); $('t5').textContent=(up?'+':'')+chg.toFixed(2)+'%';
+  priceHist.push(btcPrice);
+  if(priceHist.length > 60) priceHist.shift();
+  drawChart(priceHist);
+  $('actu').textContent = new Date().toLocaleTimeString('ca',{hour12:false});
+  addLog('✓ BTC: $'+fmt(btcPrice)+' | 24H: '+(up?'+':'')+chg.toFixed(2)+'%');
+}
+
+// Fetch mempool
+async function loadMempool() {
+  const [fees, mem, blk] = await Promise.all([
+    fetch('https://mempool.space/api/v1/fees/recommended').then(r=>r.json()),
+    fetch('https://mempool.space/api/mempool').then(r=>r.json()),
+    fetch('https://mempool.space/api/blocks/tip/height').then(r=>r.json()),
+  ]);
+  $('ff').textContent=fees.fastestFee; $('fm').textContent=fees.halfHourFee; $('fs').textContent=fees.hourFee;
+  if(btcPrice){
+    const f=v=>'~$'+(v*250/1e8*btcPrice).toFixed(2);
+    $('ffu').textContent=f(fees.fastestFee); $('fmu').textContent=f(fees.halfHourFee); $('fsu').textContent=f(fees.hourFee);
+  }
+  $('mem').textContent=(mem.vsize/1e6).toFixed(1)+' MB';
+  $('txc').textContent=fmtI(mem.count);
+  const bh=parseInt(blk);
+  $('blk').textContent=fmtI(bh); $('t7').textContent='#'+fmtI(bh);
+  const HALV=210000, next=Math.ceil(bh/HALV)*HALV, prev=next-HALV;
+  const pct=((bh-prev)/HALV*100).toFixed(1), rem=next-bh;
+  $('pf').style.width=pct+'%'; $('hpct').textContent=pct+'%';
+  $('hrem').textContent=fmtI(rem);
+  addLog('✓ Bloc #'+fmtI(bh)+' | Fees: '+fees.fastestFee+'/'+fees.halfHourFee+'/'+fees.hourFee+' sat/vB');
+}
+
+// Fetch global (dominance, hashrate, 7d, fear&greed)
+async function loadGlobal() {
+  try {
+    const d = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false').then(r=>r.json());
+    const md = d.market_data;
+    $('sup').textContent=fmtB(md.circulating_supply)+' BTC';
+    $('c7d').textContent=(md.price_change_percentage_7d>=0?'+':'')+md.price_change_percentage_7d.toFixed(2)+'%';
+    $('c7d').style.color=md.price_change_percentage_7d>=0?'#00ff41':'#ff3131';
+    addLog('✓ Dades de mercat OK');
+  } catch(e) { addLog('Mercat: '+e.message,'w'); }
+
+  try {
+    const g = await fetch('https://api.coingecko.com/api/v3/global').then(r=>r.json());
+    $('dom').textContent=g.data.market_cap_percentage.btc.toFixed(1)+'%';
+  } catch(e) {}
+
+  try {
+    const fg = await fetch('https://api.alternative.me/fng/?limit=1').then(r=>r.json());
+    const val=parseInt(fg.data[0].value), lbl=fg.data[0].value_classification;
+    $('fgn').style.left=val+'%';
+    $('fgv').textContent=val+'/100'; $('t6').textContent=val+'/100';
+    $('fgl').textContent=lbl.toUpperCase();
+    const col=val<25?'#ff3131':val<45?'#ff8844':val<55?'#ffd700':'#00ff41';
+    $('fgv').style.color=col;
+    addLog('✓ Fear & Greed: '+val+' ('+lbl+')');
+  } catch(e) { addLog('Fear&Greed: '+e.message,'w'); }
+
+  try {
+    const hr = await fetch('https://mempool.space/api/v1/mining/hashrate/3d').then(r=>r.json());
+    if(hr.currentHashrate) $('hr').textContent=(hr.currentHashrate/1e18).toFixed(0)+' EH/s';
+    if(hr.currentDifficulty) $('diff').textContent=(hr.currentDifficulty/1e12).toFixed(1)+'T';
+    addLog('✓ Hashrate OK');
+  } catch(e) {}
+}
+
+async function doRefresh() {
+  if(busy) return;
+  busy=true;
+  $('rbtn').disabled=true; $('rbtn').textContent='CARREGANT...';
+  $('dot').style.background='#ffd700'; $('sbmsg').textContent='CARREGANT...';
+  $('stmsg').textContent='CARREGANT...';
+  addLog('─── REFRESC ───');
+  try { await loadPrice(); } catch(e) { addLog('ERROR preu: '+e.message,'e'); }
+  try { await loadMempool(); } catch(e) { addLog('ERROR mempool: '+e.message,'e'); }
+  try { await loadGlobal(); } catch(e) { addLog('ERROR global: '+e.message,'e'); }
+  $('dot').style.background='#00ff41'; $('sbmsg').textContent='CONNECTAT · COINGECKO';
+  $('stmsg').textContent='ACTIU';
+  addLog('─── COMPLET ✓ ───');
+  $('rbtn').disabled=false; $('rbtn').textContent='↻ REFRESCA';
+  busy=false;
+}
+
+addLog('Obre aquest fitxer al navegador per veure dades reals.');
+addLog('Carregant automàticament...');
+setTimeout(doRefresh, 600);
+setInterval(() => { if(!busy) loadPrice(); }, 60000);
+setInterval(() => { if(!busy) { loadMempool(); loadGlobal(); } }, 300000);
+window.addEventListener('resize', () => { if(priceHist.length) drawChart(priceHist); });
+</script>
+
+</body>
+</html>
